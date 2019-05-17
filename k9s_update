@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#   Copyright 2019 ftorto
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+
+# This script updates k9s binary by comparing current release with the latest available release in github releases
+# You can provide a specific version to fetch using the first parameter
+# The new version of k9s binary will be placed at `${HOME}/.local/bin`
+
+set -e
+
+destination_path="${HOME}/.local/bin"
+
+current_version=$(k9s version | grep Version | awk '{print $2}' | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g")
+latest_version=$(http https://api.github.com/repos/derailed/k9s/releases | jq -r '.[0].tag_name')
+
+version="${1:-$latest_version}"
+
+if [[ "$current_version" == "$version" ]]
+then
+    echo "k9s is already at version $version"
+    exit 1
+fi
+
+echo "Upgrading k9s from version '$current_version' to '$version'"
+cd "${destination_path}" > /dev/null || exit 2
+curl -L --silent https://github.com/derailed/k9s/releases/download/${version}/k9s_${version}_$(uname -si | sed 's/ /_/g').tar.gz | tar xz
